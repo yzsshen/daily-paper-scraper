@@ -1,7 +1,7 @@
 import argparse
 import os
 import re
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import requests
 import yaml
@@ -137,12 +137,25 @@ def download_pdf(pdf_url, pdf_title, output_dir) -> None:
 
 def download_papers(date, output_dir) -> None:
     paper_ids = get_paper_info(date)
+
+    if not paper_ids:
+        logger.info(f"No papers found for {date}.")
+        return False
+
     logger.info(f"Found {len(paper_ids)} papers for {date}...")
 
+    all_skipped = True
+    downloaded = 0
     for id, title in paper_ids:
         pdf_url = get_arxiv_pdf_link(id)
-        download_pdf(pdf_url, title, output_dir)
-    logger.info(f"Finished downloading {len(paper_ids)} papers for {date}!")
+        if pdf_url:
+            downloaded += 1
+            download_pdf(pdf_url, title, output_dir)
+            all_skipped = False  # At least one paper was downloaded
+
+    if not all_skipped:
+        logger.info(f"Finished downloading {downloaded} papers for {date}!")
+    return all_skipped
 
 
 def main() -> None:
@@ -163,31 +176,30 @@ def main() -> None:
     mode = args.mode
 
     logger.info(f"Using {mode} mode...")
-    date_to_check = get_date_to_check(mode)
     output_dir = get_output_directory()
-    logger.info(f"Last checked date: {date_to_check}")
     logger.info(f"Output directory: {output_dir}")
 
-    # Download papers
-    download_papers(date_to_check, output_dir)
+    if mode == "daily":
+        date_to_check = get_date_to_check(mode)
+        logger.info(f"Checking papers for: {date_to_check}")
+        if download_papers(date_to_check, output_dir):
+            add_checked_date(date_to_check)
+    elif mode == "historical":
+        checked_dates = set(get_checked_dates())
+        start_date = datetime(2023, 5, 3).date()
+        date_to_check = datetime.strptime(get_date_to_check(mode), "%Y-%m-%d").date()
 
-    # Add date to the list of dates
-    add_checked_date(date_to_check)
+        while date_to_check >= start_date:
+            date_str = date_to_check.strftime("%Y-%m-%d")
+            if date_str not in checked_dates:
+                logger.info(f"Checking papers for: {date_str}")
+                if download_papers(date_str, output_dir):
+                    add_checked_date(date_str)
+            else:
+                logger.info(f"Skipping already checked date: {date_str}")
+            date_to_check -= timedelta(days=1)
 
-    if mode == "historical":
-        # Get list of checked dates
-        all_dates = set(get_checked_dates())
-        date_to_check = date.fromisoformat(date_to_check)
-        # Loop over previous days that have not previously been checked
-        for i in range(1, (date_to_check - datetime(2023, 1, 1).date()).days + 1):
-            date_to_check = (date_to_check - timedelta(days=i)).strftime("%Y-%m-%d")
-            if date_to_check not in all_dates:
-                # Download papers from the date
-                download_papers(date_to_check, output_dir)
-
-                # Add date to the list of dates
-                add_checked_date(date_to_check)
-        logger.info("All historical dates have been checked.")
+        logger.info("Finished processing all historical dates.")
 
     logger.info(f"Completed {mode} mode, exiting!")
 
