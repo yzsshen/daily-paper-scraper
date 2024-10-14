@@ -1,7 +1,7 @@
 import argparse
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import requests
 import yaml
@@ -67,7 +67,7 @@ def get_date_to_check(mode) -> str | None:
         all_dates = set(get_checked_dates())
         today = datetime.now().date()
         for i in range(1, (today - datetime(2023, 5, 3).date()).days + 1):
-            date_to_check = (today - timedelta(days=i)).strftime("%Y-%m-d")
+            date_to_check = (today - timedelta(days=i)).strftime("%Y-%m-%d")
             if date_to_check not in all_dates:
                 return date_to_check
         logger.info("All historical dates have been checked.")
@@ -177,10 +177,10 @@ def main() -> None:
     if mode == "historical":
         # Get list of checked dates
         all_dates = set(get_checked_dates())
-
+        date_to_check = date.fromisoformat(date_to_check)
         # Loop over previous days that have not previously been checked
         for i in range(1, (date_to_check - datetime(2023, 1, 1).date()).days + 1):
-            date_to_check = (date_to_check - timedelta(days=i)).strftime("%Y-%m-d")
+            date_to_check = (date_to_check - timedelta(days=i)).strftime("%Y-%m-%d")
             if date_to_check not in all_dates:
                 # Download papers from the date
                 download_papers(date_to_check, output_dir)
