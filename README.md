@@ -58,7 +58,7 @@ npm test
 
 ## Release History
 
-* 0.2.1
+<!-- * 0.2.1
     * CHANGE: Update docs (module code remains unchanged)
 * 0.2.0
     * CHANGE: Remove `setDefaultXYZ()`
@@ -67,9 +67,9 @@ npm test
     * FIX: Crash when calling `baz()` (Thanks @GenerousContributorName!)
 * 0.1.0
     * The first proper release
-    * CHANGE: Rename `foo()` to `bar()`
+    * CHANGE: Rename `foo()` to `bar()` -->
 * 0.0.1
-    * Work in progress
+    * Initial release with daily and historical modes
 
 ## Things to Do
 * Work in Progress
