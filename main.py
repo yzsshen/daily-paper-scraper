@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-import sys
 from datetime import datetime, timedelta
 
 import requests
@@ -15,7 +14,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def ensure_config_exists():
+def ensure_config_exists() -> None:
     if not os.path.exists("config.yaml"):
         with open("config.yaml", "w") as file:
             yaml.dump(DEFAULT_CONFIG, file)
@@ -34,22 +33,22 @@ def load_config():
         return yaml.safe_load(file)
 
 
-def save_config(config):
+def save_config(config) -> None:
     with open("config.yaml", "w") as file:
         yaml.dump(config, file)
 
 
-def get_checked_dates():
+def get_checked_dates() -> str:
     config = load_config()
     return config.get("checked_dates", [])
 
 
-def get_output_directory():
+def get_output_directory() -> str:
     config = load_config()
     return config["output_directory"]
 
 
-def add_checked_date(new_date):
+def add_checked_date(new_date) -> None:
     config = load_config()
     if "checked_dates" not in config:
         config["checked_dates"] = []
@@ -60,9 +59,10 @@ def add_checked_date(new_date):
     save_config(config)
 
 
-def get_date_to_check(mode):
+def get_date_to_check(mode) -> str | None:
     if mode == "daily":
-        return (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        date_to_check = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        return date_to_check
     elif mode == "historical":
         all_dates = set(get_checked_dates())
         today = datetime.now().date()
@@ -74,7 +74,7 @@ def get_date_to_check(mode):
         return None
 
 
-def get_paper_info(date):
+def get_paper_info(date) -> list:
     url = f"https://huggingface.co/papers?date={date}"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -93,7 +93,7 @@ def get_paper_info(date):
     return paper_info
 
 
-def get_arxiv_pdf_link(paper_id):
+def get_arxiv_pdf_link(paper_id) -> str:
     paper_url = f"https://huggingface.co/papers/{paper_id}"
     response = requests.get(paper_url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -103,14 +103,14 @@ def get_arxiv_pdf_link(paper_id):
     return pdf_link["href"] if pdf_link else None
 
 
-def sanitize_filename(title):
+def sanitize_filename(title) -> str:
     title = re.sub(pattern=r'[<>:"/\\|?*]', repl="", string=title)
     title = re.sub(pattern=r"\s+", repl="_", string=title)
     title = title.strip("._")
     return title[:100]
 
 
-def download_pdf(pdf_url, pdf_title, output_dir):
+def download_pdf(pdf_url, pdf_title, output_dir) -> None:
     # Sanitize the title for use in filename
     sanitized_title = sanitize_filename(pdf_title.lower())
 
@@ -135,7 +135,7 @@ def download_pdf(pdf_url, pdf_title, output_dir):
         logger.info(f"Failed to download: {pdf_url}")
 
 
-def download_papers(date, output_dir):
+def download_papers(date, output_dir) -> None:
     paper_ids = get_paper_info(date)
     logger.info(f"Found {len(paper_ids)} papers for {date}...")
 
@@ -147,13 +147,9 @@ def download_papers(date, output_dir):
 
 def main() -> None:
     logger.add(
-        f"daily_paper_scraper_{datetime.now().strftime('%Y-%m-%d')}.log",
-        format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    )
-    logger.add(
-        sys.stdout,
+        f"./logs/daily_paper_scraper_{datetime.now().strftime('%Y-%m-%d')}.log",
         colorize=True,
-        format="<green>{time:YYYY-MM-DD at HH:mm:ss}</green>  | <level>{level}</level> | {message}",
+        format="<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {message}",
     )
     parser = argparse.ArgumentParser(
         description="Download papers in daily or historical mode."
