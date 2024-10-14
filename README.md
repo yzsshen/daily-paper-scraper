@@ -1,23 +1,23 @@
-# Product Name
-> Short blurb about what your product does.
+# HuggingFace Daily Papers Scraper
+> Downloads papers on the HuggingFace Daily Papers page (https://huggingface.co/papers).
 
 <!-- [![NPM Version][npm-image]][npm-url]
 [![Build Status][travis-image]][travis-url]
 [![Downloads Stats][npm-downloads]][npm-url] -->
 
-One to two paragraph statement about your product and what it does.
+Can be used to grab the papers from the day before or to grab all papers from previous dates.
 
-![](header.png)
+![](daily-paper-scraper.png)
 
 ## Installation
 
 git clone this repo:
 
 ```
-git clone https://github.com/yzsshen/repo-template.git
+git clone https://github.com/yzsshen/daily-paper-scraper.git
 ```
 
-install requirements: #TODO
+install requirements:
 ```
 pip install -r requirements.txt
 ```
@@ -35,7 +35,15 @@ edit autoexec.bat
 
 ## Usage example
 
-A few motivating and useful examples of how your product can be used. Spice this up with code blocks and potentially more screenshots.
+To get papers from the day before, run
+```
+python main.py daily
+```
+
+To get papers from all previous dates, run
+```
+python main.py historical
+```
 
 <!-- _For more examples and usage, please refer to the [Wiki][wiki]._ -->
 
@@ -80,7 +88,7 @@ Distributed under the MIT license. See ``LICENSE`` for more information.
 
 ## Contributing
 
-1. Fork it (<https://github.com/yzsshen/repo-template/fork>)
+1. Fork it (<https://github.com/yzsshen/daily-paper-scraper/fork>)
 2. Create your feature branch (`git checkout -b feature/fooBar`)
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
