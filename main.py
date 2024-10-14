@@ -182,8 +182,8 @@ def main() -> None:
     if mode == "daily":
         date_to_check = get_date_to_check(mode)
         logger.info(f"Checking papers for: {date_to_check}")
-        if download_papers(date_to_check, output_dir):
-            add_checked_date(date_to_check)
+        download_papers(date_to_check, output_dir)
+        add_checked_date(date_to_check)
     elif mode == "historical":
         checked_dates = set(get_checked_dates())
         start_date = datetime(2023, 5, 3).date()
@@ -193,8 +193,8 @@ def main() -> None:
             date_str = date_to_check.strftime("%Y-%m-%d")
             if date_str not in checked_dates:
                 logger.info(f"Checking papers for: {date_str}")
-                if download_papers(date_str, output_dir):
-                    add_checked_date(date_str)
+                download_papers(date_str, output_dir)
+                add_checked_date(date_str)
             else:
                 logger.info(f"Skipping already checked date: {date_str}")
             date_to_check -= timedelta(days=1)
