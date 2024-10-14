@@ -1,8 +1,77 @@
+import argparse
 import os
 import re
+import sys
+from datetime import datetime, timedelta
 
 import requests
+import yaml
 from bs4 import BeautifulSoup
+from loguru import logger
+
+DEFAULT_CONFIG = {
+    "output_directory": "./papers/",
+    "checked_dates": [],
+}
+
+
+def ensure_config_exists():
+    if not os.path.exists("config.yaml"):
+        with open("config.yaml", "w") as file:
+            yaml.dump(DEFAULT_CONFIG, file)
+        logger.info("Created default config.yaml file.")
+
+        # Create the default papers directory if it doesn't exist
+        default_output_dir = DEFAULT_CONFIG["output_directory"]
+        if not os.path.exists(default_output_dir):
+            os.makedirs(default_output_dir)
+            logger.info(f"Created default output directory: {default_output_dir}")
+
+
+def load_config():
+    ensure_config_exists()
+    with open("config.yaml", "r") as file:
+        return yaml.safe_load(file)
+
+
+def save_config(config):
+    with open("config.yaml", "w") as file:
+        yaml.dump(config, file)
+
+
+def get_checked_dates():
+    config = load_config()
+    return config.get("checked_dates", [])
+
+
+def get_output_directory():
+    config = load_config()
+    return config["output_directory"]
+
+
+def add_checked_date(new_date):
+    config = load_config()
+    if "checked_dates" not in config:
+        config["checked_dates"] = []
+    if new_date not in config["checked_dates"]:
+        config["checked_dates"].append(new_date)
+        # Keep the dates in order
+        config["checked_dates"].sort()
+    save_config(config)
+
+
+def get_date_to_check(mode):
+    if mode == "daily":
+        return (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    elif mode == "historical":
+        all_dates = set(get_checked_dates())
+        today = datetime.now().date()
+        for i in range(1, (today - datetime(2023, 5, 3).date()).days + 1):
+            date_to_check = (today - timedelta(days=i)).strftime("%Y-%m-d")
+            if date_to_check not in all_dates:
+                return date_to_check
+        logger.info("All historical dates have been checked.")
+        return None
 
 
 def get_paper_info(date):
@@ -53,7 +122,7 @@ def download_pdf(pdf_url, pdf_title, output_dir):
 
     # Check if the file already exists
     if os.path.exists(full_path):
-        print(f"File already exists, skipping: {full_path}")
+        logger.info(f"File already exists, skipping: {full_path}")
         return
 
     # If the file doesn't exist, proceed with download
@@ -61,21 +130,70 @@ def download_pdf(pdf_url, pdf_title, output_dir):
     if response.status_code == 200:
         with open(full_path, "wb") as f:
             f.write(response.content)
-        print(f"Downloaded: {full_path}")
+        logger.info(f"Downloaded: {full_path}")
     else:
-        print(f"Failed to download: {pdf_url}")
+        logger.info(f"Failed to download: {pdf_url}")
 
 
-def main() -> None:
-    output_dir = "./papers/"
-
-    paper_ids = get_paper_info("2023-05-04")
-    print(paper_ids)
+def download_papers(date, output_dir):
+    paper_ids = get_paper_info(date)
+    logger.info(f"Found {len(paper_ids)} papers for {date}...")
 
     for id, title in paper_ids:
         pdf_url = get_arxiv_pdf_link(id)
-
         download_pdf(pdf_url, title, output_dir)
+    logger.info(f"Finished downloading {len(paper_ids)} papers for {date}!")
+
+
+def main() -> None:
+    logger.add(
+        f"daily_paper_scraper_{datetime.now().strftime('%Y-%m-%d')}.log",
+        format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
+    )
+    logger.add(
+        sys.stdout,
+        colorize=True,
+        format="<green>{time:YYYY-MM-DD at HH:mm:ss}</green>  | <level>{level}</level> | {message}",
+    )
+    parser = argparse.ArgumentParser(
+        description="Download papers in daily or historical mode."
+    )
+    parser.add_argument(
+        "mode",
+        choices=["daily", "historical"],
+        help="Choose 'daily' for yesterday's papers or 'historical' for unchecked dates",
+    )
+    args = parser.parse_args()
+    mode = args.mode
+
+    logger.info(f"Using {mode} mode...")
+    date_to_check = get_date_to_check(mode)
+    output_dir = get_output_directory()
+    logger.info(f"Last checked date: {date_to_check}")
+    logger.info(f"Output directory: {output_dir}")
+
+    # Download papers
+    download_papers(date_to_check, output_dir)
+
+    # Add date to the list of dates
+    add_checked_date(date_to_check)
+
+    if mode == "historical":
+        # Get list of checked dates
+        all_dates = set(get_checked_dates())
+
+        # Loop over previous days that have not previously been checked
+        for i in range(1, (date_to_check - datetime(2023, 1, 1).date()).days + 1):
+            date_to_check = (date_to_check - timedelta(days=i)).strftime("%Y-%m-d")
+            if date_to_check not in all_dates:
+                # Download papers from the date
+                download_papers(date_to_check, output_dir)
+
+                # Add date to the list of dates
+                add_checked_date(date_to_check)
+        logger.info("All historical dates have been checked.")
+
+    logger.info(f"Completed {mode} mode, exiting!")
 
 
 if __name__ == "__main__":
